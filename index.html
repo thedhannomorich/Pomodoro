@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <style>
+        /* Add loading animation styles at the top */
+        #loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        #loading-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 5px solid rgba(106, 90, 205, 0.3);
+            border-top-color: #6a5acd;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loaded #loading-container {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        :root {
+            --primary-color: rgba(255, 255, 255, 0.1);
+            --secondary-color: rgba(255, 255, 255, 0.2);
+            --accent-color: #6a5acd;
+            --text-color: white;
+            --border-radius: 12px;
+            --box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            
+            /* Updated color variables */
+            --day-color: rgba(255, 165, 0, 0.7);     /* Orange/sunny color */
+            --night-color: rgba(0, 0, 139, 0.7);     /* Deep blue night color */
+            --day-text-color: black;
+            --night-text-color: white;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: black;
+            transition: background-color 0.5s, color 1s;
+            color: var(--text-color);
+        }
+
+        #video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            opacity: 0.7;
+            transition: opacity 0.5s;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.7;
+            transition: background-color 10s linear;
+        }
+
+        #content {
+            text-align: center;
+            z-index: 1;
+            background-color: var(--primary-color);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            max-width: 80%;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--secondary-color);
+            box-shadow: var(--box-shadow);
+            width: 100%;
+            max-width: 500px;
+            transition: color 1s, transform 0.3s ease;
+        }
+
+        #content:hover {
+            transform: translateY(-5px);
+        }
+
+        #time {
+            font-size: 5rem;
+            margin: 20px 0;
+            font-weight: 600;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+        }
+
+        #status {
+            font-size: 1.8rem;
+            margin: 20px 0;
+            min-height: 3rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        #total-seconds {
+            font-size: 1.1rem;
+            margin: 20px 0;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
+        #sun-moon-container {
+            position: relative;
+            width: 100%;
+            height: 50px;
+            margin: 20px 0;
+        }
+
+        #sun-moon {
+            position: absolute;
+            font-size: 2rem;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
+            transition: left 0.5s ease, transform 0.5s ease;
+        }
+
+        #sun-moon:hover {
+            transform: scale(1.2);
+        }
+
+        #volume-control {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 200px;
+            -webkit-appearance: none;
+            height: 6px;
+            background: var(--secondary-color);
+            border-radius: 3px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #volume-control:hover {
+            height: 8px;
+        }
+
+        #volume-control::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            border: 2px solid white;
+            transition: all 0.3s ease;
+        }
+
+        #volume-control::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        #controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            font-size: 1rem;
+            background: var(--secondary-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            min-width: 100px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn:hover {
+            background: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            transform: none !important;
+            cursor: not-allowed;
+            background: var(--secondary-color);
+            box-shadow: none;
+        }
+
+        #settings-panel {
+            margin-top: 25px;
+            display: none;
+            background: var(--primary-color);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--secondary-color);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+        }
+
+        .setting-label {
+            margin-right: 15px;
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .setting-input {
+            width: 80px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--border-radius);
+            color: white;
+            font-size: 1rem;
+            text-align: center;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .setting-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.3);
+        }
+
+        #save-settings {
+            width: 100%;
+            margin-top: 15px;
+            background: var(--accent-color);
+        }
+
+        #interaction-prompt {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            flex-direction: column;
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.5s ease;
+        }
+
+        #interaction-prompt p {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+
+        #prompt-btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #prompt-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--accent-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s ease;
+            z-index: 1000;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .notification-show {
+            opacity: 1 !important;
+            transform: translateX(-50%) translateY(-10px) !important;
+        }
+
+        /* Animation for timer when time is running out */
+        .time-warning {
+            animation: pulse 1s infinite;
+            color: #ff6b6b !important;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Progress bar for timer */
+        #progress-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 100%;
+            background: var(--accent-color);
+            border-radius: 3px;
+            transition: width 1s linear;
+            transform-origin: left center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading animation container -->
+    <div id="loading-container">
+        <div id="loading-circle"></div>
+    </div>
+    
+    <div id="video-container">
+        <div id="player"></div>
+    </div>
+    
+    <div id="overlay"></div>
+    
+    <div id="content">
+        <div id="time">00:00 AM</div>
+        <div id="status">Ready to start</div>
+        <div id="total-seconds">Study Score: 0</div>
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div id="sun-moon-container">
+            <div id="sun-moon">🌞</div>
+        </div>
+        <input type="range" id="volume-control" min="0" max="1" step="0.01" value="0.5">
+        
+        <div id="controls">
+            <button id="start-btn" class="control-btn">Start</button>
+            <button id="pause-btn" class="control-btn" disabled>Pause</button>
+            <button id="reset-btn" class="control-btn" disabled>Reset</button>
+            <button id="settings-btn" class="control-btn">Settings</button>
+            <button id="fullscreen-btn" class="control-btn">Fullscreen</button>
+        </div>
+        
+        <div id="settings-panel">
+            <div class="setting-row">
+                <span class="setting-label">Study Time (minutes):</span>
+                <input type="number" id="study-time" class="setting-input" min="1" max="120" value="25">
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Break Time (minutes):</span>
+                <input type="number" id="break-time" class="setting-input" min="1" max="30" value="5">
+            </div>
+            <button id="save-settings" class="control-btn">Save Settings</button>
+        </div>
+    </div>
+
+    <!-- Audio elements with fallback sources -->
+    <audio id="tick-sound" preload="auto">
+        <source src="5sectick.wav" type="audio/wav">
+        <source src="5sectick.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="alarm-sound" preload="auto">
+        <source src="ting.wav" type="audio/wav">
+        <source src="ting.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="interaction-prompt" style="display: none;">
+        <p>Click anywhere to enable audio and video playback</p>
+        <button id="prompt-btn">Enable</button>
+    </div>
+
+    <div id="notification"></div>
+
+    <script>
+    // DOM elements
+    const timeElement = document.getElementById('time');
+    const statusElement = document.getElementById('status');
+    const totalSecondsElement = document.getElementById('total-seconds');
+    const progressBar = document.getElementById('progress-bar');
+    const sunMoonElement = document.getElementById('sun-moon');
+    const tickSound = document.getElementById('tick-sound');
+    const alarmSound = document.getElementById('alarm-sound');
+    const volumeControl = document.getElementById('volume-control');
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const settingsBtn = document.getElementById('settings-btn');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const settingsPanel = document.getElementById('settings-panel');
+    const studyTimeInput = document.getElementById('study-time');
+    const breakTimeInput = document.getElementById('break-time');
+    const saveSettingsBtn = document.getElementById('save-settings');
+    const interactionPrompt = document.getElementById('interaction-prompt');
+    const promptBtn = document.getElementById('prompt-btn');
+    const contentElement = document.getElementById('content');
+    const notificationElement = document.getElementById('notification');
+    const loadingContainer = document.getElementById('loading-container');
+
+    // Pomodoro variables
+    let isRunning = false;
+    let isPaused = false;
+    let isStudyTime = true;
+    let timerId = null;
+    let secondsLeft = 25 * 60;
+    let totalStudiedSeconds = 0;
+    let lastDate = new Date().getDate();
+    let player;
+    let isPlayerReady = false;
+    let isPlayerStarted = false;
+    let fadeAnimationId = null;
+    let totalDuration = 25 * 60; // Initial total duration
+    
+    // Default settings
+    let settings = {
+        studyTime: 25,
+        breakTime: 5
+    };
+
+    // Show notification with smooth animation
+    function showNotification(message, duration = 3000) {
+        notificationElement.textContent = message;
+        notificationElement.classList.add('notification-show');
+        
+        setTimeout(() => {
+            notificationElement.classList.remove('notification-show');
+        }, duration);
+    }
+
+    // Initialize YouTube Player with better error handling
+    function initYouTubePlayer() {
+        // Check if API is already loaded
+        if (window.YT && window.YT.Player) {
+            createPlayer();
+            return;
+        }
+
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        tag.onerror = handleYouTubeAPIFailure;
+        
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        // Preserve existing handler if present
+        const oldOnReady = window.onYouTubeIframeAPIReady;
+        
+        window.onYouTubeIframeAPIReady = function() {
+            if (oldOnReady) oldOnReady();
+            createPlayer();
+        };
+    }
+
+    function createPlayer() {
+        try {
+            player = new YT.Player('player', {
+                height: '100%',
+                width: '100%',
+                videoId: 'jfKfPfyJRdk',
+                playerVars: {
+                    'autoplay': 0,
+                    'controls': 0,
+                    'disablekb': 1,
+                    'fs': 0,
+                    'loop': 1,
+                    'modestbranding': 1,
+                    'rel': 0,
+                    'enablejsapi': 1,
+                    'playlist': 'jfKfPfyJRdk'
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        } catch (e) {
+            console.error("YouTube Player creation failed:", e);
+            handleYouTubeAPIFailure();
+        }
+    }
+
+    function handleYouTubeAPIFailure() {
+        console.log("YouTube player not available, using fallback background");
+        document.getElementById('video-container').style.display = 'none';
+        document.body.style.backgroundColor = '#000033';
+        showNotification("Background video not available - using fallback colors");
+    }
+
+    function onPlayerReady(event) {
+        isPlayerReady = true;
+        event.target.setVolume(volumeControl.value * 100);
+        
+        // Show interaction prompt if needed
+        if (!isPlayerStarted) {
+            showInteractionPrompt();
+        }
+    }
+
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.ENDED) {
+            event.target.playVideo();
+        }
+        if (event.data === YT.PlayerState.PAUSED) {
+            setTimeout(() => {
+                if (event.target.getPlayerState() === YT.PlayerState.PAUSED) {
+                    event.target.playVideo();
+                }
+            }, 500);
+        }
+    }
+
+    function showInteractionPrompt() {
+        interactionPrompt.style.display = 'flex';
+    }
+
+    function hideInteractionPrompt() {
+        interactionPrompt.style.display = 'none';
+    }
+
+    function startPlayback() {
+        if (!isPlayerReady || !player) return;
+        
+        player.playVideo().then(() => {
+            isPlayerStarted = true;
+            showNotification("Background music started");
+        }).catch(error => {
+            console.log("Playback failed:", error);
+            if (!player.isMuted()) {
+                player.mute();
+                player.playVideo().then(() => {
+                    showNotification("Background music started (muted)");
+                });
+            }
+        });
+    }
+
+    // Initialize from localStorage
+    function initializeFromStorage() {
+        try {
+            // Load settings
+            const savedSettings = localStorage.getItem('pomodoroSettings');
+            if (savedSettings) {
+                settings = JSON.parse(savedSettings);
+                studyTimeInput.value = settings.studyTime;
+                breakTimeInput.value = settings.breakTime;
+                showNotification("Settings loaded from storage");
+            }
+            
+            // Load stats
+            const storedTotal = localStorage.getItem('totalStudiedSeconds');
+            const storedDate = localStorage.getItem('lastDate');
+            const currentDate = new Date().getDate();
+            
+            if (storedDate && parseInt(storedDate) === currentDate && storedTotal) {
+                totalStudiedSeconds = parseInt(storedTotal);
+            } else {
+                totalStudiedSeconds = 0;
+                localStorage.setItem('lastDate', currentDate.toString());
+            }
+            
+            updateTotalSecondsDisplay();
+        } catch (e) {
+            console.error("LocalStorage access failed", e);
+            showNotification("Failed to load settings from storage", 5000);
+        }
+    }
+
+    // Save settings to localStorage
+    function saveSettings() {
+        settings.studyTime = parseInt(studyTimeInput.value) || 25;
+        settings.breakTime = parseInt(breakTimeInput.value) || 5;
+        
+        try {
+            localStorage.setItem('pomodoroSettings', JSON.stringify(settings));
+            settingsPanel.style.display = 'none';
+            showNotification("Settings saved successfully");
+            
+            if (!isRunning) {
+                resetTimer();
+            }
+        } catch (e) {
+            console.error("Failed to save settings", e);
+            showNotification("Failed to save settings", 5000);
+        }
+    }
+
+    // Update time display
+    function updateTime() {
+        const now = new Date();
+        let hours = now.getHours();
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        
+        timeElement.textContent = `${hours}:${minutes} ${ampm}`;
+        updateSunMoonPosition(now);
+        
+        // Check for date change
+        if (now.getDate() !== lastDate) {
+            totalStudiedSeconds = 0;
+            lastDate = now.getDate();
+            try {
+                localStorage.setItem('lastDate', lastDate.toString());
+            } catch (e) {
+                console.error("Failed to update date in localStorage", e);
+            }
+            updateTotalSecondsDisplay();
+        }
+    }
+
+    // Update sun/moon position and colors (corrected for day/night colors)
+    function updateSunMoonPosition(now) {
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const totalMinutes = hours * 60 + minutes;
+        const overlay = document.getElementById('overlay');
+        
+        // Daytime is from 6:00 AM (360 minutes) to 6:00 PM (1080 minutes)
+        const isDaytime = totalMinutes >= 360 && totalMinutes < 1080;
+        
+        // Calculate transition progress (0 to 1)
+        let transitionProgress;
+        
+        // Sunrise transition (6:00-7:00 AM)
+        if (totalMinutes >= 360 && totalMinutes < 420) {
+            transitionProgress = (totalMinutes - 360) / 60;
+        } 
+        // Sunset transition (5:00-6:00 PM)
+        else if (totalMinutes >= 1020 && totalMinutes < 1080) {
+            transitionProgress = 1 - ((totalMinutes - 1020) / 60);
+        }
+        // Full daytime (7:00 AM - 5:00 PM)
+        else if (totalMinutes >= 420 && totalMinutes < 1020) {
+            transitionProgress = 1;
+        }
+        // Full nighttime (6:00 PM - 5:59 AM)
+        else {
+            transitionProgress = 0;
+        }
+        
+        // Update sun/moon icon
+        sunMoonElement.textContent = isDaytime ? '🌞' : '🌜';
+        
+        // Calculate position based on 24-hour cycle
+        const dayProgress = (totalMinutes / (24 * 60)) * 100;
+        
+        // Position the sun/moon - normal for day, invert for night
+        if (isDaytime) {
+            sunMoonElement.style.left = `${dayProgress}%`;
+        } else {
+            sunMoonElement.style.left = `${100 - dayProgress}%`;
+        }
+        
+        // Smooth color transition for overlay - now orange for day, deep blue for night
+        if (isDaytime) {
+            // Interpolate from night to day color (deep blue to orange)
+            const r = Math.floor(0 + (255 * transitionProgress));
+            const g = Math.floor(0 + (165 * transitionProgress));
+            const b = Math.floor(139 - (139 * transitionProgress));
+            overlay.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.7)`;
+            
+            // Change text color to black when bright enough (after 7:00 AM)
+            if (totalMinutes >= 420) {
+                document.body.style.color = 'black';
+                contentElement.style.color = 'black';
+            } else {
+                // Fade from white to black during sunrise
+                const textLuminance = Math.floor(255 - (255 * ((totalMinutes - 360) / 60)));
+                document.body.style.color = `rgb(${textLuminance}, ${textLuminance}, ${textLuminance})`;
+                contentElement.style.color = `rgb(${textLuminance}, ${textLuminance}, ${textLuminance})`;
+            }
+        } else {
+            // Interpolate from day to night color (orange to deep blue)
+            const r = Math.floor(255 - (255 * transitionProgress));
+            const g = Math.floor(165 - (165 * transitionProgress));
+            const b = Math.floor(0 + (139 * transitionProgress));
+            overlay.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.7)`;
+            
+            // Change text color to white when dark enough (after 6:00 PM)
+            if (totalMinutes >= 1080 || totalMinutes < 360) {
+                document.body.style.color = 'white';
+                contentElement.style.color = 'white';
+            } else {
+                // Fade from black to white during sunset
+                const textLuminance = Math.floor(0 + (255 * ((totalMinutes - 1020) / 60)));
+                document.body.style.color = `rgb(${textLuminance}, ${textLuminance}, ${textLuminance})`;
+                contentElement.style.color = `rgb(${textLuminance}, ${textLuminance}, ${textLuminance})`;
+            }
+        }
+    }
+
+    // Start pomodoro
+    function startPomodoro() {
+        if (isRunning && !isPaused) return;
+        
+        if (isPaused) {
+            // Resuming from pause
+            isPaused = false;
+            pauseBtn.textContent = 'Pause';
+            showNotification("Timer resumed");
+        } else {
+            // Starting fresh
+            isRunning = true;
+            isStudyTime = true;
+            secondsLeft = settings.studyTime * 60;
+            totalDuration = secondsLeft;
+            resetBtn.disabled = false;
+            showNotification(`Study session started for ${settings.studyTime} minutes`);
+        }
+        
+        startBtn.disabled = true;
+        pauseBtn.disabled = false;
+        
+        statusElement.textContent = isStudyTime 
+            ? `Study for ${formatTime(secondsLeft)}` 
+            : `Break for ${formatTime(secondsLeft)}`;
+        
+        // Remove warning animation if it was active
+        statusElement.classList.remove('time-warning');
+        
+        clearInterval(timerId);
+        timerId = setInterval(updateTimer, 1000);
+        updateProgressBar();
+    }
+
+    // Pause pomodoro
+    function pausePomodoro() {
+        if (!isRunning) return;
+        
+        if (isPaused) {
+            // Resume the timer
+            isPaused = false;
+            pauseBtn.textContent = 'Pause';
+            timerId = setInterval(updateTimer, 1000);
+            statusElement.textContent = isStudyTime 
+                ? `Study for ${formatTime(secondsLeft)}` 
+                : `Break for ${formatTime(secondsLeft)}`;
+            showNotification("Timer resumed");
+            updateProgressBar();
+        } else {
+            // Pause the timer
+            isPaused = true;
+            clearInterval(timerId);
+            pauseBtn.textContent = 'Resume';
+            statusElement.textContent = 'Paused';
+            showNotification("Timer paused");
+        }
+    }
+
+    // Reset pomodoro
+    function resetTimer() {
+        clearInterval(timerId);
+        isRunning = false;
+        isPaused = false;
+        isStudyTime = true;
+        secondsLeft = settings.studyTime * 60;
+        totalDuration = secondsLeft;
+        
+        startBtn.disabled = false;
+        pauseBtn.disabled = true;
+        resetBtn.disabled = true;
+        pauseBtn.textContent = 'Pause';
+        
+        statusElement.textContent = 'Ready to start';
+        statusElement.classList.remove('time-warning');
+        updateTimerDisplay();
+        updateProgressBar();
+        
+        // Reset audio fade if any
+        if (fadeAnimationId) {
+            cancelAnimationFrame(fadeAnimationId);
+            fadeAnimationId = null;
+        }
+        
+        // Reset volume to current setting
+        const volume = parseFloat(volumeControl.value);
+        tickSound.volume = volume;
+        alarmSound.volume = volume;
+        
+        if (isPlayerReady && player && player.setVolume) {
+            player.setVolume(volume * 100);
+        }
+        
+        showNotification("Timer reset");
+    }
+
+    // Format time as MM:SS
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
+    }
+
+    // Update progress bar
+    function updateProgressBar() {
+        if (!isRunning) {
+            progressBar.style.width = '100%';
+            return;
+        }
+        
+        const progressPercentage = (secondsLeft / totalDuration) * 100;
+        progressBar.style.width = `${progressPercentage}%`;
+        
+        // Change color based on time left (red when less than 20%)
+        if (progressPercentage < 20) {
+            progressBar.style.backgroundColor = '#ff6b6b';
+        } else {
+            progressBar.style.backgroundColor = 'var(--accent-color)';
+        }
+    }
+
+    // Fade audio smoothly
+    function fadeAudio(targetVolume, duration) {
+        const startVolume = tickSound.volume;
+        const deltaVolume = targetVolume - startVolume;
+        const startTime = performance.now();
+        
+        if (fadeAnimationId) {
+            cancelAnimationFrame(fadeAnimationId);
+        }
+        
+        function updateVolume() {
+            const elapsed = performance.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const newVolume = startVolume + (deltaVolume * progress);
+            
+            tickSound.volume = newVolume;
+            alarmSound.volume = newVolume;
+            
+            if (isPlayerReady && player && player.setVolume) {
+                player.setVolume(newVolume * 100);
+            }
+            
+            if (progress < 1) {
+                fadeAnimationId = requestAnimationFrame(updateVolume);
+            } else {
+                fadeAnimationId = null;
+            }
+        }
+        
+        updateVolume();
+    }
+
+    // Play alert sounds (5sectick.wav followed by ting.wav after 5 seconds)
+    function playAlertSounds() {
+        try {
+            // First sound (tick sound)
+            if (tickSound.readyState >= 2) { // HAVE_ENOUGH_DATA
+                tickSound.currentTime = 0;
+                tickSound.play().catch(e => {
+                    console.error("Tick sound failed:", e);
+                    // Fallback: Try again with user interaction
+                    document.addEventListener('click', function tryAgain() {
+                        tickSound.play().catch(e => console.error("Still failed:", e));
+                        document.removeEventListener('click', tryAgain);
+                    }, { once: true });
+                });
+
+                // Second sound (alarm sound) after 5 seconds
+                setTimeout(() => {
+                    if (alarmSound.readyState >= 2) {
+                        alarmSound.currentTime = 0;
+                        alarmSound.play().catch(e => {
+                            console.error("Alarm sound failed:", e);
+                            // Fallback for alarm sound
+                            document.addEventListener('click', function tryAgain() {
+                                alarmSound.play().catch(e => console.error("Still failed:", e));
+                                document.removeEventListener('click', tryAgain);
+                            }, { once: true });
+                        });
+                    }
+                }, 5000);
+            }
+        } catch (e) {
+            console.error("Error in playAlertSounds:", e);
+        }
+    }
+
+    // Update timer
+    function updateTimer() {
+        secondsLeft--;
+        
+        // Update progress bar
+        updateProgressBar();
+        
+        // Check if time is running out (last 8 seconds)
+        if (secondsLeft <= 8) {
+            // Add warning animation
+            statusElement.classList.add('time-warning');
+            
+            // Play alert sounds only once when reaching 8 seconds
+            if (secondsLeft === 8) {
+                playAlertSounds();
+            }
+        } else {
+            // Remove warning animation if time increased (from pause/reset)
+            statusElement.classList.remove('time-warning');
+        }
+        
+        if (secondsLeft <= 0) {
+            // Time's up - switch mode
+            clearInterval(timerId);
+            
+            if (isStudyTime) {
+                // Study time ended, start break
+                isStudyTime = false;
+                secondsLeft = settings.breakTime * 60;
+                totalDuration = secondsLeft;
+                statusElement.textContent = `Break for ${formatTime(secondsLeft)}`;
+                statusElement.classList.remove('time-warning');
+                fadeAudio(0, 2000);
+                showNotification(`Study session complete! Take a ${settings.breakTime} minute break`);
+            } else {
+                // Break time ended, start study
+                isStudyTime = true;
+                secondsLeft = settings.studyTime * 60;
+                totalDuration = secondsLeft;
+                statusElement.textContent = `Study for ${formatTime(secondsLeft)}`;
+                statusElement.classList.remove('time-warning');
+                fadeAudio(volumeControl.value, 2000);
+                showNotification(`Break over! Starting ${settings.studyTime} minute study session`);
+            }
+            
+            // Start new timer for the next session
+            timerId = setInterval(updateTimer, 1000);
+            updateProgressBar();
+        }
+        
+        // Update studied time every 30 seconds during study
+        if (isStudyTime && secondsLeft % 30 === 0) {
+            totalStudiedSeconds += 30;
+            try {
+                localStorage.setItem('totalStudiedSeconds', totalStudiedSeconds.toString());
+            } catch (e) {
+                console.error("Failed to save studied time", e);
+            }
+            updateTotalSecondsDisplay();
+        }
+        
+        updateTimerDisplay();
+    }
+
+    // Update timer display
+    function updateTimerDisplay() {
+        if (isRunning) {
+            statusElement.textContent = isStudyTime 
+                ? `Study for ${formatTime(secondsLeft)}` 
+                : `Break for ${formatTime(secondsLeft)}`;
+        }
+    }
+
+    // Update total seconds display
+    function updateTotalSecondsDisplay() {
+        totalSecondsElement.textContent = `Study Score: ${totalStudiedSeconds}`;
+    }
+
+    // Toggle settings panel
+    function toggleSettings() {
+        settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Fullscreen functionality
+    function toggleFullscreen() {
+        if (!document.fullscreenEnabled) {
+            console.log("Fullscreen not supported");
+            showNotification("Fullscreen not supported in your browser");
+            return;
+        }
+        
+        const promise = document.fullscreenElement 
+            ? document.exitFullscreen()
+            : document.documentElement.requestFullscreen();
+            
+        promise.then(() => {
+            fullscreenBtn.textContent = document.fullscreenElement 
+                ? 'Exit Fullscreen' 
+                : 'Fullscreen';
+        }).catch(err => {
+            console.error("Fullscreen error:", err);
+            showNotification("Failed to toggle fullscreen mode");
+        });
+    }
+
+    // Handle visibility changes - only during study time
+    function handleVisibilityChange() {
+        if (document.hidden && isRunning && !isPaused && isStudyTime) {
+            // Auto-pause when tab becomes inactive during study time
+            pausePomodoro();
+            showNotification("Timer paused because you switched tabs");
+        }
+    }
+
+    // Hide loading animation when everything is ready
+    function hideLoadingAnimation() {
+        document.body.classList.add('loaded');
+        setTimeout(() => {
+            loadingContainer.style.display = 'none';
+        }, 500); // Match the transition duration
+    }
+
+    // Initialize everything
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hide loading animation after a short delay to ensure everything is loaded
+        setTimeout(hideLoadingAnimation, 1500);
+        
+        initializeFromStorage();
+        updateTime();
+        setInterval(updateTime, 1000);
+        initYouTubePlayer();
+        
+        // Set initial volume
+        const initialVolume = parseFloat(volumeControl.value);
+        tickSound.volume = initialVolume;
+        alarmSound.volume = initialVolume;
+        
+        // Event listeners
+        startBtn.addEventListener('click', startPomodoro);
+        pauseBtn.addEventListener('click', pausePomodoro);
+        resetBtn.addEventListener('click', resetTimer);
+        settingsBtn.addEventListener('click', toggleSettings);
+        saveSettingsBtn.addEventListener('click', saveSettings);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        
+        volumeControl.addEventListener('input', function() {
+            const volume = parseFloat(this.value);
+            tickSound.volume = volume;
+            alarmSound.volume = volume;
+            
+            if (isPlayerReady && player && player.setVolume) {
+                player.setVolume(volume * 100);
+            }
+        });
+        
+        document.addEventListener('fullscreenchange', () => {
+            fullscreenBtn.textContent = document.fullscreenElement 
+                ? 'Exit Fullscreen' 
+                : 'Fullscreen';
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+        });
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        promptBtn.addEventListener('click', () => {
+            hideInteractionPrompt();
+            startPlayback();
+        });
+        
+        // Show interaction prompt if needed
+        document.addEventListener('click', function initInteraction() {
+            startPlayback();
+            document.removeEventListener('click', initInteraction);
+        }, { once: true });
+    });
+    </script>
+</body>
+</html>
