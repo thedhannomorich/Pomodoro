@@ -45,12 +45,6 @@
             --text-color: white;
             --border-radius: 12px;
             --box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            
-            /* Updated color variables */
-            --day-color: rgba(255, 165, 0, 0.7);     /* Orange/sunny color */
-            --night-color: rgba(0, 0, 139, 0.7);     /* Deep blue night color */
-            --day-text-color: black;
-            --night-text-color: white;
         }
 
         body {
@@ -63,7 +57,6 @@
             justify-content: center;
             align-items: center;
             background-color: black;
-            transition: background-color 0.5s, color 1s;
             color: var(--text-color);
         }
 
@@ -85,8 +78,7 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-            opacity: 0.7;
-            transition: background-color 10s linear;
+            background-color: rgba(0, 0, 0, 0.7);
         }
 
         #content {
@@ -101,7 +93,7 @@
             box-shadow: var(--box-shadow);
             width: 100%;
             max-width: 500px;
-            transition: color 1s, transform 0.3s ease;
+            transition: transform 0.3s ease;
         }
 
         #content:hover {
@@ -113,7 +105,6 @@
             margin: 20px 0;
             font-weight: 600;
             letter-spacing: 2px;
-            transition: all 0.3s ease;
         }
 
         #status {
@@ -121,32 +112,12 @@
             margin: 20px 0;
             min-height: 3rem;
             font-weight: 500;
-            transition: all 0.3s ease;
         }
 
         #total-seconds {
             font-size: 1.1rem;
             margin: 20px 0;
             opacity: 0.8;
-            transition: all 0.3s ease;
-        }
-
-        #sun-moon-container {
-            position: relative;
-            width: 100%;
-            height: 50px;
-            margin: 20px 0;
-        }
-
-        #sun-moon {
-            position: absolute;
-            font-size: 2rem;
-            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
-            transition: left 0.5s ease, transform 0.5s ease;
-        }
-
-        #sun-moon:hover {
-            transform: scale(1.2);
         }
 
         #volume-control {
@@ -242,7 +213,6 @@
             justify-content: space-between;
             align-items: center;
             margin: 15px 0;
-            transition: all 0.3s ease;
         }
 
         .setting-label {
@@ -261,7 +231,6 @@
             font-size: 1rem;
             text-align: center;
             outline: none;
-            transition: all 0.2s;
         }
 
         .setting-input:focus {
@@ -387,9 +356,6 @@
         <div id="progress-container">
             <div id="progress-bar"></div>
         </div>
-        <div id="sun-moon-container">
-            <div id="sun-moon">🌞</div>
-        </div>
         <input type="range" id="volume-control" min="0" max="1" step="0.01" value="0.5">
         
         <div id="controls">
@@ -398,6 +364,7 @@
             <button id="reset-btn" class="control-btn" disabled>Reset</button>
             <button id="settings-btn" class="control-btn">Settings</button>
             <button id="fullscreen-btn" class="control-btn">Fullscreen</button>
+            <button id="toggle-video-btn" class="control-btn">Hide Video</button>
         </div>
         
         <div id="settings-panel">
@@ -436,7 +403,6 @@
     const statusElement = document.getElementById('status');
     const totalSecondsElement = document.getElementById('total-seconds');
     const progressBar = document.getElementById('progress-bar');
-    const sunMoonElement = document.getElementById('sun-moon');
     const tickSound = document.getElementById('tick-sound');
     const alarmSound = document.getElementById('alarm-sound');
     const volumeControl = document.getElementById('volume-control');
@@ -445,6 +411,7 @@
     const resetBtn = document.getElementById('reset-btn');
     const settingsBtn = document.getElementById('settings-btn');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const toggleVideoBtn = document.getElementById('toggle-video-btn');
     const settingsPanel = document.getElementById('settings-panel');
     const studyTimeInput = document.getElementById('study-time');
     const breakTimeInput = document.getElementById('break-time');
@@ -454,6 +421,7 @@
     const contentElement = document.getElementById('content');
     const notificationElement = document.getElementById('notification');
     const loadingContainer = document.getElementById('loading-container');
+    const videoContainer = document.getElementById('video-container');
 
     // Pomodoro variables
     let isRunning = false;
@@ -468,6 +436,7 @@
     let isPlayerStarted = false;
     let fadeAnimationId = null;
     let totalDuration = 25 * 60; // Initial total duration
+    let isVideoVisible = true;
     
     // Default settings
     let settings = {
@@ -483,6 +452,13 @@
         setTimeout(() => {
             notificationElement.classList.remove('notification-show');
         }, duration);
+    }
+
+    // Toggle video visibility
+    function toggleVideo() {
+        isVideoVisible = !isVideoVisible;
+        videoContainer.style.display = isVideoVisible ? 'block' : 'none';
+        toggleVideoBtn.textContent = isVideoVisible ? 'Hide Video' : 'Show Video';
     }
 
     // Initialize YouTube Player with better error handling
@@ -514,7 +490,7 @@
             player = new YT.Player('player', {
                 height: '100%',
                 width: '100%',
-                videoId: 'jfKfPfyJRdk',
+                videoId: 'Na0w3Mz46GA',
                 playerVars: {
                     'autoplay': 0,
                     'controls': 0,
@@ -524,7 +500,7 @@
                     'modestbranding': 1,
                     'rel': 0,
                     'enablejsapi': 1,
-                    'playlist': 'jfKfPfyJRdk'
+                    'playlist': 'Na0w3Mz46GA'
                 },
                 events: {
                     'onReady': onPlayerReady,
@@ -653,7 +629,6 @@
         hours = hours ? hours : 12;
         
         timeElement.textContent = `${hours}:${minutes} ${ampm}`;
-        updateSunMoonPosition(now);
         
         // Check for date change
         if (now.getDate() !== lastDate) {
@@ -665,87 +640,6 @@
                 console.error("Failed to update date in localStorage", e);
             }
             updateTotalSecondsDisplay();
-        }
-    }
-
-    // Update sun/moon position and colors (corrected for day/night colors)
-    function updateSunMoonPosition(now) {
-        const hours = now.getHours();
-        const minutes = now.getMinutes();
-        const totalMinutes = hours * 60 + minutes;
-        const overlay = document.getElementById('overlay');
-        
-        // Daytime is from 6:00 AM (360 minutes) to 6:00 PM (1080 minutes)
-        const isDaytime = totalMinutes >= 360 && totalMinutes < 1080;
-        
-        // Calculate transition progress (0 to 1)
-        let transitionProgress;
-        
-        // Sunrise transition (6:00-7:00 AM)
-        if (totalMinutes >= 360 && totalMinutes < 420) {
-            transitionProgress = (totalMinutes - 360) / 60;
-        } 
-        // Sunset transition (5:00-6:00 PM)
-        else if (totalMinutes >= 1020 && totalMinutes < 1080) {
-            transitionProgress = 1 - ((totalMinutes - 1020) / 60);
-        }
-        // Full daytime (7:00 AM - 5:00 PM)
-        else if (totalMinutes >= 420 && totalMinutes < 1020) {
-            transitionProgress = 1;
-        }
-        // Full nighttime (6:00 PM - 5:59 AM)
-        else {
-            transitionProgress = 0;
-        }
-        
-        // Update sun/moon icon
-        sunMoonElement.textContent = isDaytime ? '🌞' : '🌜';
-        
-        // Calculate position based on 24-hour cycle
-        const dayProgress = (totalMinutes / (24 * 60)) * 100;
-        
-        // Position the sun/moon - normal for day, invert for night
-        if (isDaytime) {
-            sunMoonElement.style.left = `${dayProgress}%`;
-        } else {
-            sunMoonElement.style.left = `${100 - dayProgress}%`;
-        }
-        
-        // Smooth color transition for overlay - now orange for day, deep blue for night
-        if (isDaytime) {
-            // Interpolate from night to day color (deep blue to orange)
-            const r = Math.floor(0 + (255 * transitionProgress));
-            const g = Math.floor(0 + (165 * transitionProgress));
-            const b = Math.floor(139 - (139 * transitionProgress));
-            overlay.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.7)`;
-            
-            // Change text color to black when bright enough (after 7:00 AM)
-            if (totalMinutes >= 420) {
-                document.body.style.color = 'black';
-                contentElement.style.color = 'black';
-            } else {
-                // Fade from white to black during sunrise
-                const textLuminance = Math.floor(255 - (255 * ((totalMinutes - 360) / 60)));
-                document.body.style.color = `rgb(${textLuminance}, ${textLuminance}, ${textLuminance})`;
-                contentElement.style.color = `rgb(${textLuminance}, ${textLuminance}, ${textLuminance})`;
-            }
-        } else {
-            // Interpolate from day to night color (orange to deep blue)
-            const r = Math.floor(255 - (255 * transitionProgress));
-            const g = Math.floor(165 - (165 * transitionProgress));
-            const b = Math.floor(0 + (139 * transitionProgress));
-            overlay.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.7)`;
-            
-            // Change text color to white when dark enough (after 6:00 PM)
-            if (totalMinutes >= 1080 || totalMinutes < 360) {
-                document.body.style.color = 'white';
-                contentElement.style.color = 'white';
-            } else {
-                // Fade from black to white during sunset
-                const textLuminance = Math.floor(0 + (255 * ((totalMinutes - 1020) / 60)));
-                document.body.style.color = `rgb(${textLuminance}, ${textLuminance}, ${textLuminance})`;
-                contentElement.style.color = `rgb(${textLuminance}, ${textLuminance}, ${textLuminance})`;
-            }
         }
     }
 
@@ -1080,6 +974,7 @@
         settingsBtn.addEventListener('click', toggleSettings);
         saveSettingsBtn.addEventListener('click', saveSettings);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
+        toggleVideoBtn.addEventListener('click', toggleVideo);
         
         volumeControl.addEventListener('input', function() {
             const volume = parseFloat(this.value);
@@ -1104,7 +999,14 @@
             }
         });
         
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+        document.addEventListener('visibilitychange', function() {
+            handleVisibilityChange();
+            
+            // When returning to the tab during paused study time
+            if (!document.hidden && isRunning && isPaused && isStudyTime) {
+                showNotification("Timer was paused - click Resume to continue");
+            }
+        });
         
         promptBtn.addEventListener('click', () => {
             hideInteractionPrompt();
